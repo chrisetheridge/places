@@ -56,7 +56,6 @@
 
 (defn update-dependency-tree [state]
   (let [{:keys [systems]} state
-        _                 (prn :s systems)
         dep-tree          (dependency-tree systems)]
     (->  (assoc state :tree dep-tree)
          (assoc :system-order (dep/topo-sort dep-tree)))))
@@ -71,6 +70,8 @@
       (swap! *state update-dependency-tree)
       @*state
       #_sys)))
+
+;; TODO: write tests.
 
 (comment
 
@@ -88,21 +89,4 @@
 
     (dep/topo-sort (system-dep-tree systems)))
 
-  (let [_          (reset! *state  {:systems {}})
-        system-key ::db
-        start      #(let [a (atom {::started "yes"})]
-                      (prn "started")
-                      a)
-        stop       #(let [s (deref %)]
-                      (prn "stoped" s)
-                      (reset! % :none))]
-    (register-system! system-key start stop)
-    @*state)
-
-  (stop-all-systems!)
-
-  (start-all-systems!)
-
-
-  @*state
   )
