@@ -18,52 +18,54 @@
       (util/throw! "No system found." {:system/key system-key})
       (let [stop-fn @(:system/service system)]
         (stop-fn)
-        (swap! *systems assoc system-key :system/running? false)
+        (swap! *state update :systems assoc system-key :system/running? false)
         (assoc system :system/running? false)))))
 
 (defn stop-all-systems! []
   (doseq [sys-key (reverse (:sorted-systems @*state))]
     (stop-system! sys-key)
-    @*systems))
+    (:systems @*state)))
 
 (defn start-system! [system-key]
-  (let [sys (get (:systems @*state) system-key)]
+  (let [systems (:systems @*state)
+        sys (get systems system-key)]
     (if-not sys
       (util/throw! "No system found." {:system/key system-key})
       (let [start   (:system/start-fn sys)
-            service (start)
-            sys'    (merge {:system/service    start
+            service (start systems)
+            sys'    (merge {:system/service service
                             :system/running?   true
                             :system/start-time (util/inst)})]
-        (swap! *systems assoc system-key sys')
+        (swap! *state update :systems assoc system-key sys')
         sys'))))
 
 (defn start-all-systems! []
-  (doseq [sys-key (:sorted-systems @*state)]
+  (doseq [sys-key (:system-order @*state)]
     (start-system! sys-key)
-    @*systems))
+    (:systems @*state)))
 
-(defn- system-dep-tree [systems]
+(defn dependency-tree [systems]
   (let [graph (dep/graph)]
     (reduce
      (fn [graph [sys-key system]]
-       (reduce (fn [graph dep]
-                 (dep/depend graph sys-key dep))
+       (reduce #(dep/depend %1 sys-key %2)
                graph
                (:system/depends system)))
      graph
      systems)))
 
-(defn- update-dependency-tree [state]
+(defn update-dependency-tree [state]
   (let [{:keys [systems]} state
         _                 (prn :s systems)
-        dep-tree          (system-dep-tree systems)]
+        dep-tree          (dependency-tree systems)]
     (->  (assoc state :tree dep-tree)
          (assoc :system-order (dep/topo-sort dep-tree)))))
 
 (defn register-system! [system-key start-fn stop-fn depends]
-  (if (get (:systems @*state) system-key)
-    (util/throw! "System already exists." {:system/key system-key})
+  (if-let [sys (get (:systems @*state) system-key)]
+    (util/throw! "System has already been registered."
+                 {:system-key        system-key
+                  :registered-system (dissoc sys :system/stop-fn)})
     (let [sys (new-system system-key start-fn stop-fn depends)]
       (swap! *state update :systems assoc system-key sys)
       (swap! *state update-dependency-tree)
@@ -97,4 +99,10 @@
     (register-system! system-key start stop)
     @*state)
 
+  (stop-all-systems!)
+
+  (start-all-systems!)
+
+
+  @*state
   )
