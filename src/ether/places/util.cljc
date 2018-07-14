@@ -1,14 +1,16 @@
 (ns ether.places.util
   #?(:clj
-     (:import [java.util Date UUID])))
+     (:require [clojure.java.io :as io]
+               [clojure.edn :as edn])
+     (:import [java.util.UUID java.util.Date])))
 
 (defn new-uuid []
-  #?(:clj (UUID/randomUUID)
+  #?(:clj (java.util.UUID/randomUUID)
      :cljs (cljs.core/new-uuid)))
 
 (defn inst []
-  #?(:clj  (Date.)
+  #?(:clj (java.util.Date.)
      :cljs (js/Date.)))
 
 (defn throw! [message ex-data]
-  q(throw (ex-info message ex-data)))
+  (throw (ex-info message ex-data)))
