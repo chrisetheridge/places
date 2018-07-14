@@ -12,8 +12,24 @@
    :headers {"Content-Type" "text/html"}
    :body    (slurp (io/resource "resources/public/index.html"))})
 
-(defn start! [args]
-  (let [start #(http.server/run-server index {:port (:port args 3000)})]
-    ()))
+(defn- start-server [systems]
+  (let [config (some-> (get-in systems [::system/config :system/service])
+                       deref)]
+    (atom (http.server/run-server index {:port (:port config 3000)}))))
 
-(defn -main [& args])
+(defn- stop-server [{:system/keys [service]}]
+  (let [stop-server (deref service)]
+    (stop-server :timeout 500)))
+
+#_(defn -main [& args]
+  (start! args))
+
+
+(comment
+
+  (system/register-system! ::system/server
+                           start-server
+                           stop-server
+                           #{::system/config})
+
+  )
