@@ -1,0 +1,3 @@
+#{ :server #{:config :db} 
+   :db     #{:config}
+   :config #{}}

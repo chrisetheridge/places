@@ -10,7 +10,8 @@
                  [com.stuartsierra/dependency "0.2.0"]]
   ;; :plugins []
 
-  :profiles {:bundle {:global-vars {*warn-on-reflection* true}}}
+  :profiles {:bundle {:global-vars {*warn-on-reflection* true}}
+             :dev    {:dependencies [[org.clojure/tools.namespace "0.2.11"]]}}
   ;;  :aliases {}
 
   :source-paths ["src"]

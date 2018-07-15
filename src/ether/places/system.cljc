@@ -1,8 +1,17 @@
 (ns ether.places.system
   (:require [com.stuartsierra.dependency :as dep]
+            [ether.lib.logging :as logging]
             [ether.places.util :as util]))
 
 (defonce *state (atom {:systems {}}))
+
+(defn- -dispatch [sys-key & args] sys-key)
+
+(defmulti start!      [sys-key system-map]   -dispatch)
+(defmulti stop!       [sys-key system]       -dispatch)
+(defmulti init        [sys-key]              -dispatch)
+(defmulti heartbeat   [sys-key system]       -dispatch)
+(defmulti catch-error [sys-key error system] -dispatch)
 
 (defn- new-system [system-key start stop depends]
   {:system/key      system-key
@@ -16,8 +25,8 @@
         system  (get systems system-key)]
     (if-not system
       (util/throw! "No system found." {:system/key system-key})
-      (let [stop-fn @(:system/service system)]
-        (stop-fn)
+      (let [_ (logging/info "Stopping system: " system-key)]
+        (stop! system)
         (swap! *state update :systems assoc system-key :system/running? false)
         (assoc system :system/running? false)))))
 
@@ -28,14 +37,15 @@
 
 (defn start-system! [system-key]
   (let [systems (:systems @*state)
-        sys (get systems system-key)]
+        sys     (get systems system-key)]
     (if-not sys
       (util/throw! "No system found." {:system/key system-key})
-      (let [start   (:system/start-fn sys)
-            service (start systems)
-            sys'    (merge {:system/service service
-                            :system/running?   true
-                            :system/start-time (util/inst)})]
+      (let [_       (logging/info "Starting system: " system-key)
+            service (start! systems)
+            sys'    (merge sys {:system/service    service
+                                :system/running?   true
+                                :system/start-time (util/inst)})]
+        (logging/info "System started: " system-key sys')
         (swap! *state update :systems assoc system-key sys')
         sys'))))
 
@@ -70,23 +80,3 @@
       (swap! *state update-dependency-tree)
       @*state
       #_sys)))
-
-;; TODO: write tests.
-
-(comment
-
-  (let [system1 {:system/key ::system1}
-        system2 {:system/key ::system2}
-        systema {:system/key     ::systemA
-                 :system/depends #{::system1}}
-        systemb {:system/key     ::systemB
-                 :system/depends #{::system2}}
-        systemc {:system/key     ::systemC
-                 :system/depends #{::systemb ::system1}}
-        systems (->> (map #(hash-map (:system/key %) %)
-                          [system1 system2 systema systemb systemc])
-                     (into {}))]
-
-    (dep/topo-sort (system-dep-tree systems)))
-
-  )

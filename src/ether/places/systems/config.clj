@@ -1,4 +1,4 @@
-(ns ether.places.config
+(ns ether.places.systems.config
   (:require [ether.places.util :as util]
             [ether.places.system :as system]
             [clojure.java.io :as io]
