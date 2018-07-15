@@ -1,17 +1,27 @@
 (ns ether.places.system
-  (:require [com.stuartsierra.dependency :as dep]
-            [ether.lib.logging :as logging]
-            [ether.places.util :as util]))
+  (:require
+   [com.stuartsierra.dependency :as dep]
+   [ether.lib.logging :as logging]
+   [ether.places.util :as util]))
 
 (defonce *state (atom {:systems {}}))
 
-(defn- -dispatch [sys-key & args] sys-key)
+(defn- -dispatch [sys-key systems] sys-key)
 
-(defmulti start!      [sys-key system-map]   -dispatch)
-(defmulti stop!       [sys-key system]       -dispatch)
-(defmulti init        [sys-key]              -dispatch)
-(defmulti heartbeat   [sys-key system]       -dispatch)
-(defmulti catch-error [sys-key error system] -dispatch)
+(defmulti start!      -dispatch)
+(defmulti init        -dispatch)
+
+(defmulti stop!       (fn [system]   (:system/key-system)))
+(defmulti heartbeat   (fn [system t] (:system/key system)))
+(defmulti catch-error (fn [system e] (:system/key system)))
+
+;; noop for now.
+;; TOOD: what should happen for default heartbeat/catch-error, if anything?
+(defmethod heartbeat :default [_]
+  ::noop)
+
+(defmethod catch-error :default [_]
+  ::noop)
 
 (defn- new-system [system-key start stop depends]
   {:system/key      system-key
